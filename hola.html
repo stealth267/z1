@@ -331,34 +331,89 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* Estilos adicionales para optimizar en iPhone y dispositivos móviles */
-    @media (max-width: 600px) {
+
+    /* Media Queries para dispositivos móviles */
+    @media (max-width: 768px) {
       .side-nav {
-        width: 80%;
-        right: -80%;
+        width: 100%;
+        right: -100%;
       }
       .side-nav.open {
         right: 0;
       }
       .menu-toggle {
-        top: 10px;
-        right: 10px;
-        width: 40px;
-        height: 40px;
-        font-size: 22px;
+        top: 5px;
+        right: 5px;
+        width: 30px;
+        height: 30px;
+        font-size: 20px;
       }
       main {
+        padding: 5px;
+      }
+      section {
         padding: 10px;
       }
-      .caratula-card {
-        width: 100%;
-        max-width: 320px;
+      .flashcard {
+        font-size: 36px;
+        padding: 15px;
       }
       table {
         font-size: 14px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      form input, form textarea, form select {
+        font-size: 14px;
+        padding: 6px;
+      }
+      form button {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      .tabs button {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      .caratula-card {
+        width: 100%;
+        min-height: auto;
       }
       .session-buttons {
         width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .session-buttons button {
+        width: 48%;
+      }
+      #wordSearch {
+        font-size: 16px;
+        padding: 8px;
+      }
+      .pagination-controls button {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+      }
+      button {
+        min-width: 80px;
+        min-height: 40px;
+      }
+      .responseButtons {
+        flex-direction: column;
+        gap: 5px;
+      }
+      #progressBarContainer {
+        height: 15px;
+      }
+      #progressCount {
+        font-size: 12px;
       }
     }
   </style>
@@ -2206,6 +2261,7 @@
       renderNewWordsFromArray();
     }
 
+    // Se implementa la mejora: al hacer clic en una celda (dependiendo de la columna)
     function renderNewWordsFromArray() {
       const newWordsTable = document.getElementById("newWordsTable");
       const thead = newWordsTable.querySelector("thead");
@@ -2213,6 +2269,7 @@
       thead.innerHTML = "";
       tbody.innerHTML = "";
 
+      // Construcción del encabezado
       if (wordFields && wordFields.length > 0) {
         const headerRow = document.createElement("tr");
         wordFields.forEach(field => {
@@ -2231,12 +2288,15 @@
         thead.appendChild(headerRow);
       }
 
+      // Construcción de las filas
       newWords.forEach(w => {
         const row = document.createElement("tr");
         wordFields.forEach((field, colIndex) => {
           const cell = document.createElement("td");
           cell.textContent = w[field.key] || "";
+
           if (colIndex === 0) {
+            // Primera columna: al hacer clic se quita el sombreado de toda la fila.
             cell.addEventListener("click", () => {
               const rowCells = row.children;
               for (let i = 0; i < rowCells.length; i++) {
@@ -2245,6 +2305,7 @@
               }
             });
           } else {
+            // Otras columnas: al hacer clic se alterna el sombreado en toda la columna.
             cell.addEventListener("click", () => {
               const tableBody = document.querySelector("#newWordsTable tbody");
               const rows = tableBody.querySelectorAll("tr");
