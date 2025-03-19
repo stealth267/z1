@@ -30,17 +30,18 @@
     .side-nav {
       position: fixed;
       top: 0;
-      right: -100%;
+      right: 0;
       width: 240px;
       height: 100%;
       background: #fff;
-      transition: right 0.3s ease;
+      transition: transform 0.3s ease;
+      transform: translateX(100%);
       z-index: 9999;
       padding: 20px 10px;
       overflow-y: auto;
     }
     .side-nav.open {
-      right: 0;
+      transform: translateX(0);
       border-left: 1px solid #ccc;
       box-shadow: -2px 0 8px rgba(0,0,0,0.2);
     }
@@ -81,7 +82,6 @@
     main {
       flex: 1;
       padding: 10px;
-      transition: margin-right 0.3s ease;
     }
     section {
       display: none;
@@ -336,10 +336,10 @@
     @media (max-width: 768px) {
       .side-nav {
         width: 100%;
-        right: -100%;
+        transform: translateX(100%);
       }
       .side-nav.open {
-        right: 0;
+        transform: translateX(0);
       }
       .menu-toggle {
         top: 5px;
@@ -849,12 +849,10 @@
 
     menuToggleBtn.addEventListener("click", () => {
       sideNav.classList.toggle("open");
-      mainContent.style.marginRight = sideNav.classList.contains("open") ? "240px" : "0";
     });
 
     function showSection(sectionId) {
       sideNav.classList.remove("open");
-      mainContent.style.marginRight = "0";
       const sections = [
         "sectionCaratulas",
         "sectionPracticar",
