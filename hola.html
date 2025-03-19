@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Práctica con Carátulas – PC + Firebase</title>
+  
+  <!-- Librerías para CSV/Excel & Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Estilos (CSS) -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+    .app-container {
+      display: flex;
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+    }
+    .side-nav {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 240px;
+      height: 100%;
+      background: #fff;
+      transition: right 0.3s ease;
+      z-index: 9999;
+      padding: 20px 10px;
+      overflow-y: auto;
+    }
+    .side-nav.open {
+      right: 0;
+      border-left: 1px solid #ccc;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+    }
+    .side-nav h2 {
+      font-size: 18px;
+      margin: 0 0 1em;
+      text-align: center;
+    }
+    .side-nav button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin: 0.2em 0;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .menu-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      background: #333;
+      color: #fff;
+      font-size: 26px;
+      border: none;
+      border-radius: 4px;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    main {
+      flex: 1;
+      padding: 10px;
+      transition: margin-right 0.3s ease;
+    }
+    section {
+      display: none;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      max-width: 1200px;
+      margin: 0 auto 20px;
+    }
+    section.active {
+      display: block;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .flashcard {
+      font-size: 48px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      border: 4px solid transparent;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      transition: border-color 0.3s;
+      background-color: #ffffff;
+      border-left: 10px solid #fff;
+      border-right: 10px solid #fff;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 16px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+    th {
+      background: #eee;
+    }
+    form input, form textarea, form select {
+      margin: 5px 0;
+      padding: 8px;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    form button {
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin: 5px 0;
+    }
+    .tabs {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .tabs button {
+      margin: 0 5px;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tabContent {
+      display: none;
+    }
+    .tabContent.active {
+      display: block;
+    }
+    .dark-theme {
+      background: #1e1e1e;
+      color: #ddd;
+    }
+    .dark-theme section {
+      background: #2a2a2a;
+      border-color: #555;
+    }
+    .dark-theme th {
+      background: #333;
+      color: #ddd;
+    }
+    .dark-theme .side-nav {
+      background: #2a2a2a;
+    }
+    .dark-theme .side-nav.open {
+      border-left-color: #555;
+    }
+    .dark-theme .side-nav button {
+      background: #333;
+      color: #ddd;
+    }
+    .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 20000; 
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+    }
+    .closeModal {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .responseButtons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .responseButtons button {
+      font-size: 18px;
+      padding: 12px 24px;
+    }
+    .session-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      width: 20%;
+    }
+    .session-buttons button {
+      width: 100%;
+    }
+    #progressBarContainer {
+      position: relative;
+      background: #ddd;
+      width: 100%;
+      height: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    #progressBar {
+      background: #4CAF50;
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    #progressCount {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      line-height: 20px;
+      font-size: 14px;
+      color: #000;
+    }
+    #wordSearch {
+      font-size: 20px;
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #fieldsList {
+      list-style: none;
+      padding: 0;
+    }
+    #fieldsList li {
+      margin-bottom: 5px;
+      padding: 5px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+    }
+    /* Tarjetas de carátulas */
+    .caratula-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .caratula-card {
+      width: 220px;
+      min-height: 150px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative;
+      padding: 10px;
+    }
+    .caratula-card:hover {
+      transform: scale(1.03);
+    }
+    .caratula-card h3 {
+      margin: 0;
+      padding: 0;
+      font-size: 18px;
+      text-align: center;
+    }
+    .caratula-card button {
+      margin-top: 5px;
+      font-size: 14px;
+      width: 90%;
+    }
+    .caratula-create-card {
+      font-size: 50px;  
+      color: #999;
+      font-weight: bold;
+      justify-content: center;
+    }
+    .pagination-controls {
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+    }
+    .pagination-controls button {
+      cursor: pointer;
+      padding: 8px 12px;
+      font-size: 16px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* Estilos adicionales para optimizar en iPhone y dispositivos móviles */
+    @media (max-width: 600px) {
+      .side-nav {
+        width: 80%;
+        right: -80%;
+      }
+      .side-nav.open {
+        right: 0;
+      }
+      .menu-toggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+      }
+      main {
+        padding: 10px;
+      }
+      .caratula-card {
+        width: 100%;
+        max-width: 320px;
+      }
+      table {
+        font-size: 14px;
+      }
+      .session-buttons {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Botón hamburguesa -->
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <!-- Contenedor principal -->
+  <div class="app-container">
+    <!-- Menú Lateral -->
+    <nav class="side-nav" id="sideNav">
+      <h2>Menú</h2>
+      <button id="btnCaratulas">Carátulas</button>
+      <button id="btnPracticar">Practicar</button>
+      <button id="btnGestionar">Gestionar</button>
+      <button id="btnEstadisticas">Estadísticas</button>
+      <button id="btnNuevas">Nuevas Palabras</button>
+      <button id="btnAjustes">Ajustes</button>
+      <button id="btnLoginSection">Autenticación</button>
+    </nav>
+    <main id="mainContent">
+      <!-- SECCIÓN LOGIN -->
+      <section id="sectionLogin">
+        <h1>Autenticación Firebase</h1>
+        <div>
+          <label>Email:</label>
+          <input type="email" id="loginEmail" placeholder="ejemplo@correo.com"/>
+        </div>
+        <div>
+          <label>Contraseña:</label>
+          <input type="password" id="loginPassword" placeholder="******"/>
+        </div>
+        <br/>
+        <button id="btnRegister">Registrar</button>
+        <button id="btnLogin">Iniciar Sesión</button>
+        <button id="btnLogout" style="display:none;">Cerrar Sesión</button>
+        <p id="loginStatus" style="color:blue; margin-top:10px;"></p>
+      </section>
+
+      <!-- SECCIÓN CARÁTULAS -->
+      <section id="sectionCaratulas" class="active">
+        <h1>Carátulas / Temas</h1>
+        <p>Selecciona o crea nuevas categorías (por ejemplo, “Mandarín”, “Inglés”, “Historia”, etc.).  
+        Aquí puedes también eliminar la carátula o reiniciar sus estadísticas.</p>
+
+        <!-- Contenedor de cards -->
+        <div class="caratula-cards" id="caratulaCardsContainer"></div>
+
+        <!-- Modal para crear carátula -->
+        <div id="createCaratulaModal" class="modal">
+          <div class="modal-content">
+            <span class="closeModal" id="closeCreateModal">×</span>
+            <h2>Crear Carátula</h2>
+            <input type="text" id="newCaratulaName" placeholder="Nombre de la carátula" />
+            <br/>
+            <button id="btnCrearCaratulaModal">Crear</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN PRACTICAR -->
+      <section id="sectionPracticar">
+        <h1>Modo Practicar</h1>
+        <!-- Dropdown para elegir carátula + botón de confirmación + check -->
+        <div>
+          <label>Carátula:</label>
+          <select id="caratulaDropdownPracticar"></select>
+          <button id="confirmCaratulaPracticar">Confirmar</button>
+          <span id="caratulaDropdownPracticarCheck" style="display:none; color:green; font-weight:bold;">✔</span>
+        </div>
+        <br/>
+        <div id="practiceOptions">
+          <label for="practiceMode">Modo: </label>
+          <select id="practiceMode">
+            <option value="normal">Añadidas</option>
+            <option value="aleatorio">Aleatorio</option>
+            <option value="dificultad">Aleatorio por Dificultad</option>
+          </select>
+          <br/><br/>
+          <!-- Selección del campo frontal -->
+          <label for="frontField">Campo frontal:</label>
+          <select id="frontField"></select>
+          <button id="startPractice">Iniciar Práctica</button>
+        </div>
+        <div id="progressBarContainer">
+          <div id="progressBar"></div>
+          <div id="progressCount"></div>
+        </div>
+        <div id="flashcard" class="flashcard">?</div>
+        <div id="details" class="details hidden"></div>
+        <div class="responseButtons">
+          <button id="btnMostrar" style="background:#eee; border:2px solid #ccc;">Mostrar</button>
+          <button id="btnMal" class="hidden" style="background:#f77; border:2px solid #c00;">Mal</button>
+          <button id="btnBien" class="hidden" style="background:#7f7; border:2px solid #0c0;">Bien</button>
+        </div>
+        <!-- Contenedor de botones de sesión -->
+        <div class="session-buttons">
+          <button id="finishSession" style="background:#ccc;">Terminar Sesión</button>
+          <button id="resetSession"  style="background:#ccc;">Resetear Sesión</button>
+        </div>
+      </section>
+
+      <!-- SECCIÓN GESTIONAR -->
+      <section id="sectionGestionar">
+        <h1>Gestionar</h1>
+        <!-- Dropdown para elegir carátula + botón de confirmación + check -->
+        <div>
+          <label>Carátula:</label>
+          <select id="caratulaDropdownGestionar"></select>
+          <button id="confirmCaratulaGestionar">Confirmar</button>
+          <span id="caratulaDropdownGestionarCheck" style="display:none; color:green; font-weight:bold;">✔</span>
+        </div>
+
+        <div class="tabs">
+          <button id="tabPalabras">Palabras</button>
+          <button id="tabCampos">Campos</button>
+        </div>
+        <!-- Pestaña Palabras -->
+        <div id="tabPalabrasContent" class="tabContent active">
+          <h2>Gestión de Palabras</h2>
+          <!-- Formulario dinámico -->
+          <form id="wordForm">
+            <p>No hay campos definidos. Importa un archivo o define tus campos manualmente.</p>
+          </form>
+          <!-- Buscador en tiempo real -->
+          <input type="text" id="wordSearch" placeholder="Buscar palabra..."/>
+          <!-- Tabla -->
+          <table id="wordsTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+
+          <!-- Controles de paginación -->
+          <div class="pagination-controls">
+            <button id="btnPrevPage">Anterior</button>
+            <span id="paginationInfo">Página 1</span>
+            <button id="btnNextPage">Siguiente</button>
+          </div>
+          
+          <br/>
+          <button id="exportData">Exportar Datos (JSON)</button>
+          <input type="file" id="importData" accept=".json, .csv, .xls, .xlsx" style="display:inline-block;"/>
+          <!-- Botón para confirmar subida + barra de progreso -->
+          <button id="confirmUpload" style="display:inline-block;">Confirmar Subida</button>
+          <div id="uploadProgressContainer" style="display:none; background:#ddd; width:100%; height:20px; border-radius:10px; margin-top:5px;">
+            <div id="uploadProgressBar" style="background:#4caf50; height:100%; width:0%;"></div>
+          </div>
+
+          <!-- Botón e input para sumar datos -->
+          <button id="appendData">Sumar al archivo</button>
+          <input type="file" id="appendFile" accept=".json, .csv, .xls, .xlsx" style="display:none;"/>
+        </div>
+        <!-- Pestaña Campos -->
+        <div id="tabCamposContent" class="tabContent">
+          <h2>Gestionar Campos</h2>
+          <form id="fieldsForm">
+            <div>
+              <label for="fieldKey">Clave (key):</label>
+              <input type="text" id="fieldKey" placeholder="Nombre interno (sin espacios)" required />
+            </div>
+            <div>
+              <label for="fieldLabel">Etiqueta (label):</label>
+              <input type="text" id="fieldLabel" placeholder="Nombre a mostrar" required />
+            </div>
+            <div>
+              <label for="fieldType">Tipo:</label>
+              <select id="fieldType">
+                <option value="text">Texto</option>
+                <option value="number">Número</option>
+                <option value="textarea">Área de texto</option>
+              </select>
+            </div>
+            <div>
+              <label for="fieldRequired">Requerido:</label>
+              <input type="checkbox" id="fieldRequired" />
+            </div>
+            <button type="submit">Agregar Campo</button>
+          </form>
+          <h3>Campos Definidos</h3>
+          <ul id="fieldsList"></ul>
+          <button id="saveFieldsOrder">Guardar Cambios</button>
+        </div>
+      </section>
+
+      <!-- SECCIÓN ESTADÍSTICAS -->
+      <section id="sectionEstadisticas">
+        <h1>Estadísticas</h1>
+        <!-- Dropdown para elegir carátula + botón de confirmación + check -->
+        <div>
+          <label>Carátula:</label>
+          <select id="caratulaDropdownEstadisticas"></select>
+          <button id="confirmCaratulaEstadisticas">Confirmar</button>
+          <span id="caratulaDropdownEstadisticasCheck" style="display:none; color:green; font-weight:bold;">✔</span>
+        </div>
+
+        <div style="text-align:center; margin-bottom:15px;">
+          <button id="tabGlobal">Globales</button>
+          <button id="tabSession">Sesión Actual</button>
+        </div>
+        <div id="globalStatsContainer" class="tabContent active">
+          <p id="globalStats"></p>
+          <h3>Desempeño Global por Campo frontal:</h3>
+          <table id="failTable">
+            <thead>
+              <tr>
+                <th data-field="campoFrontal">Campo frontal</th>
+                <th data-field="failCount">Fallos</th>
+                <th data-field="correctCount">Aciertos</th>
+                <th data-field="total">Intentos Totales</th>
+                <th data-field="accuracy">Promedio de Acierto</th>
+                <th>Calificación</th>
+                <th>Resetear</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="sessionStatsContainer" class="tabContent">
+          <p id="sessionStats"></p>
+          <h3>Detalle de la Sesión Actual:</h3>
+          <table id="sessionDetailTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Campo frontal</th>
+                <th>Respuesta</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCIÓN NUEVAS PALABRAS -->
+      <section id="sectionNuevas">
+        <h1>Nuevas Palabras</h1>
+        <!-- Dropdown para elegir carátula + botón de confirmación + check -->
+        <div>
+          <label>Carátula:</label>
+          <select id="caratulaDropdownNuevas"></select>
+          <button id="confirmCaratulaNuevas">Confirmar</button>
+          <span id="caratulaDropdownNuevasCheck" style="display:none; color:green; font-weight:bold;">✔</span>
+        </div>
+
+        <p>Últimas <span id="newWordsCountDisplay">10</span> palabras añadidas.</p>
+        <div>
+          <label for="highlightColor">Color para sombrear:</label>
+          <input type="color" id="highlightColor" value="#000000"/>
+          <button id="btnClearHighlight">Quitar sombreado</button>
+          <button id="btnRandomizeNewWords">Aleatorio</button>
+        </div>
+        <table id="newWordsTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+
+        <!-- BOTÓN DE PRÁCTICA PERSONALIZADA -->
+        <br/>
+        <button id="btnCustomPractice" style="background:#4CAF50; color:white;">Práctica Personalizada</button>
+
+        <!-- Modal PARA BÚSQUEDA Y AGREGADO DE PALABRAS -->
+        <div id="customPracticeModal" class="modal">
+          <div class="modal-content">
+            <span class="closeModal" id="closeCustomPracticeModal">×</span>
+            <h2>Agregar Palabras a Práctica Personalizada</h2>
+            <input type="text" id="customPracticeSearch" placeholder="Buscar palabra..."/>
+            <br/>
+            <table id="customPracticeResults">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TABLA CON LAS PALABRAS SELECCIONADAS -->
+        <h2>Palabras Seleccionadas</h2>
+        <table id="customPracticeTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <button id="startCustomPractice" style="background:#888; color:white;">Iniciar Práctica Personalizada</button>
+      </section>
+
+      <!-- SECCIÓN AJUSTES -->
+      <section id="sectionAjustes">
+        <h1>Ajustes</h1>
+        <form id="settingsForm">
+          <label>Tecla "Mostrar":</label>
+          <input type="text" id="keyMostrar" value="m" maxlength="1" required/><br/>
+          <label>Tecla "Bien":</label>
+          <input type="text" id="keyCorrect" value="k" maxlength="1" required/><br/>
+          <label>Tecla "Mal":</label>
+          <input type="text" id="keyIncorrect" value="l" maxlength="1" required/><br/>
+          <label>Umbral de fallos (repaso):</label>
+          <input type="number" id="problemThreshold" value="2" required/><br/>
+          <label>Delay Feedback (ms):</label>
+          <input type="number" id="feedbackDelay" value="500" required/><br/>
+          <label>Audio Activado:</label>
+          <select id="audioEnabled">
+            <option value="true" selected>Si</option>
+            <option value="false">No</option>
+          </select><br/>
+          <label>Tema Oscuro:</label>
+          <input type="checkbox" id="darkTheme"/><br/>
+          <label>Notificaciones:</label>
+          <input type="checkbox" id="notificationsEnabled" checked/><br/>
+          <label>Cantidad de palabras nuevas:</label>
+          <input type="number" id="newWordsCount" value="10" min="1" required/><br/>
+          <button type="submit">Guardar Ajustes</button>
+          <!-- BOTÓN 1: RESETEAR TODO -->
+          <button type="button" id="resetAll">Resetear Todo</button>
+        </form>
+        <br/>
+        <!-- BOTÓN 2: RESETEAR ESTADÍSTICAS -->
+        <button type="button" id="resetStats">Resetear Estadísticas</button>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal para editar palabra -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="closeModal" id="closeModal">×</span>
+      <h2>Editar Palabra</h2>
+      <form id="editWordForm">
+        <div id="editFields"></div>
+        <button type="submit">Guardar Cambios</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT PRINCIPAL -->
+  <script type="module">
+    /********************************
+     * IMPORTS DE FIREBASE (MODULAR)
+     ********************************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-analytics.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      onSnapshot,
+      collection,
+      addDoc,
+      query,
+      getDocs,
+      deleteDoc
+    } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+    import { onSnapshot as onSnapshotQuery } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+    /********************************
+     * CONFIGURACIÓN DE FIREBASE
+     ********************************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyBnl6pd_m4AsypD1IPJ11FhgZQf8XFDEqw",
+      authDomain: "appz-571f4.firebaseapp.com",
+      projectId: "appz-571f4",
+      storageBucket: "appz-571f4.firebasestorage.app",
+      messagingSenderId: "709288105818",
+      appId: "1:709288105818:web:8141a1a00683d551960563",
+      measurementId: "G-K62SLNN75N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    /********************************
+     * VARIABLES GLOBALES
+     ********************************/
+    let categories = [];        
+    let currentCategoryId = ""; 
+    let wordFields = [];
+    let wordFieldsOrder = [];
+    let words = [];
+    let globalHistory = [];
+
+    // Ajustes
+    let settings = {
+      keyMostrar: "m",
+      keyCorrect: "k",
+      keyIncorrect: "l",
+      problemThreshold: 2,
+      audioEnabled: true,
+      feedbackDelay: 500,
+      darkTheme: false,
+      notificationsEnabled: true,
+      newWordsCount: 10
+    };
+
+    // Estado de práctica
+    let practiceSessionWords = [];
+    let currentIndex = 0, correctCount = 0, sessionPracticed = 0;
+    let responses = [];
+    let currentStreak = 0;
+    let weightedMode = false;
+
+    // Para “Nuevas Palabras”
+    let selectedColor = "#000000";
+    let newWords = [];
+    let currentEditIndex = null;
+
+    // Paginación en "Gestionar"
+    let currentPage = 1;
+    const pageSize = 100;
+
+    // Ordenar en “Estadísticas”
+    let currentSortField = 'failCount';
+    let currentSortOrder = 'desc';
+    let draggedIndex = null;
+
+    // Práctica Personalizada
+    let customPracticeList = [];
+
+    // Archivo a importar (para Confirmar Subida)
+    let fileToImport = null;
+
+    /********************************
+     * MENÚ LATERAL Y SECCIONES
+     ********************************/
+    const menuToggleBtn = document.getElementById("menuToggle");
+    const sideNav = document.getElementById("sideNav");
+    const mainContent = document.getElementById("mainContent");
+
+    menuToggleBtn.addEventListener("click", () => {
+      sideNav.classList.toggle("open");
+      mainContent.style.marginRight = sideNav.classList.contains("open") ? "240px" : "0";
+    });
+
+    function showSection(sectionId) {
+      sideNav.classList.remove("open");
+      mainContent.style.marginRight = "0";
+      const sections = [
+        "sectionCaratulas",
+        "sectionPracticar",
+        "sectionGestionar",
+        "sectionEstadisticas",
+        "sectionNuevas",
+        "sectionAjustes",
+        "sectionLogin"
+      ];
+      sections.forEach(id => document.getElementById(id).classList.remove("active"));
+      document.getElementById(sectionId).classList.add("active");
+    }
+
+    document.getElementById("btnCaratulas").addEventListener("click", () => showSection("sectionCaratulas"));
+    document.getElementById("btnPracticar").addEventListener("click", () => showSection("sectionPracticar"));
+    document.getElementById("btnGestionar").addEventListener("click", () => showSection("sectionGestionar"));
+    document.getElementById("btnEstadisticas").addEventListener("click", () => {
+      showSection("sectionEstadisticas");
+      renderGlobalStats();
+      renderSessionStats();
+    });
+    document.getElementById("btnNuevas").addEventListener("click", () => {
+      renderNewWordsTable();
+      showSection("sectionNuevas");
+    });
+    document.getElementById("btnAjustes").addEventListener("click", () => showSection("sectionAjustes"));
+    document.getElementById("btnLoginSection").addEventListener("click", () => showSection("sectionLogin"));
+
+    /********************************
+     * AUTENTICACIÓN
+     ********************************/
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const btnRegister = document.getElementById("btnRegister");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnLogout = document.getElementById("btnLogout");
+    const loginStatus = document.getElementById("loginStatus");
+
+    btnRegister.addEventListener("click", async () => {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+        loginStatus.textContent = "Registrado: " + cred.user.email;
+      } catch (err) {
+        loginStatus.textContent = "Error registro: " + err.message;
+      }
+    });
+    btnLogin.addEventListener("click", async () => {
+      try {
+        const cred = await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+        loginStatus.textContent = "Sesión iniciada: " + cred.user.email;
+      } catch (err) {
+        loginStatus.textContent = "Error login: " + err.message;
+      }
+    });
+    btnLogout.addEventListener("click", async () => {
+      await signOut(auth);
+      localStorage.clear();
+      words = [];
+      wordFields = [];
+      wordFieldsOrder = [];
+      globalHistory = [];
+      practiceSessionWords = [];
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      loginStatus.textContent = "Sesión cerrada.";
+      location.reload();
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginStatus.textContent = `Logueado como: ${user.email}`;
+        btnLogout.style.display = "inline-block";
+        subscribeToCategories();
+      } else {
+        loginStatus.textContent = "No hay usuario logueado";
+        btnLogout.style.display = "none";
+        words = [];
+        wordFields = [];
+        wordFieldsOrder = [];
+        globalHistory = [];
+        renderizarTabla();
+        generarFormularioDinamico([]);
+        updateFieldsList();
+        const frontSelect = document.getElementById("frontField");
+        if (frontSelect) frontSelect.innerHTML = "<option>No hay campos</option>";
+      }
+    });
+
+    /********************************
+     * SUSCRIPCIÓN A LA LISTA DE CARÁTULAS
+     ********************************/
+    function subscribeToCategories() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const catCollectionRef = collection(db, "users", user.uid, "categories");
+      onSnapshotQuery(catCollectionRef, snapshot => {
+        categories = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          categories.push({
+            id: docSnap.id,
+            name: data.name || "Sin nombre",
+            words: data.words || [],
+            wordFieldsOrder: data.wordFieldsOrder || []
+          });
+        });
+        renderCaratulaCards();
+        renderAllDropdowns();
+      });
+    }
+
+    /********************************
+     * RENDER DE LAS TARJETAS (Carátulas)
+     ********************************/
+    const caratulaCardsContainer = document.getElementById("caratulaCardsContainer");
+    function renderCaratulaCards() {
+      caratulaCardsContainer.innerHTML = "";
+
+      categories.forEach(cat => {
+        const card = document.createElement("div");
+        card.classList.add("caratula-card");
+
+        if (cat.id === currentCategoryId) {
+          card.style.border = "2px solid #4caf50";
+        }
+
+        const title = document.createElement("h3");
+        title.textContent = cat.name;
+        card.appendChild(title);
+
+        const btnResetStats = document.createElement("button");
+        btnResetStats.textContent = "Reiniciar Stats";
+        btnResetStats.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (confirm(`¿Seguro que deseas reiniciar stats de "${cat.name}"?`)) {
+            resetCategoryStats(cat.id);
+          }
+        });
+        card.appendChild(btnResetStats);
+
+        const btnDelete = document.createElement("button");
+        btnDelete.textContent = "Eliminar Carátula";
+        btnDelete.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (confirm(`¿Eliminar carátula "${cat.name}" y todos sus datos?`)) {
+            deleteCategory(cat.id);
+          }
+        });
+        card.appendChild(btnDelete);
+
+        card.addEventListener("click", () => {
+          selectCategoryById(cat.id);
+        });
+        caratulaCardsContainer.appendChild(card);
+      });
+
+      const plusCard = document.createElement("div");
+      plusCard.classList.add("caratula-card", "caratula-create-card");
+      plusCard.textContent = "+";
+      plusCard.addEventListener("click", () => {
+        document.getElementById("createCaratulaModal").style.display = "block";
+      });
+      caratulaCardsContainer.appendChild(plusCard);
+    }
+
+    /********************************
+     * CREAR CARÁTULA
+     ********************************/
+    const createCaratulaModal = document.getElementById("createCaratulaModal");
+    const closeCreateModal = document.getElementById("closeCreateModal");
+    const btnCrearCaratulaModal = document.getElementById("btnCrearCaratulaModal");
+
+    closeCreateModal.addEventListener("click", () => {
+      createCaratulaModal.style.display = "none";
+    });
+
+    btnCrearCaratulaModal.addEventListener("click", createNewCategory);
+
+    async function createNewCategory() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const nameInput = document.getElementById("newCaratulaName");
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert("Debes colocar un nombre de carátula.");
+        return;
+      }
+      nameInput.value = "";
+      createCaratulaModal.style.display = "none";
+      try {
+        await addDoc(collection(db, "users", user.uid, "categories"), {
+          name,
+          words: [],
+          wordFieldsOrder: []
+        });
+        console.log(`Carátula "${name}" creada con éxito.`);
+      } catch(e) {
+        console.error("Error creando carátula:", e);
+        alert("Error creando carátula. Revisa la consola.");
+      }
+    }
+
+    /********************************
+     * SELECCIONAR CARÁTULA
+     ********************************/
+    function selectCategoryById(catId) {
+      currentCategoryId = catId;
+      localStorage.setItem("currentCategoryId", catId);
+      loadCategoryData();
+      updateDropdownChecks();
+      updateAllDropdownsSelection();
+    }
+
+    // Función nueva: actualiza la selección en todos los dropdowns
+    function updateAllDropdownsSelection() {
+      const allSelectIds = [
+        "caratulaDropdownPracticar",
+        "caratulaDropdownGestionar",
+        "caratulaDropdownEstadisticas",
+        "caratulaDropdownNuevas"
+      ];
+      allSelectIds.forEach(selectId => {
+        const sel = document.getElementById(selectId);
+        if (sel) {
+          sel.value = currentCategoryId;
+        }
+      });
+      updateDropdownChecks();
+    }
+
+    let unsubGlobalHistory = null; 
+    function loadCategoryData() {
+      const cat = categories.find(c => c.id === currentCategoryId);
+      if (!cat) return;
+
+      words = cat.words.map(w => {
+        if (!w.id) w.id = Date.now() + Math.random().toString(16).slice(2);
+        w.failCount = w.failCount || 0;
+        w.correctCount = w.correctCount || 0;
+        return w;
+      });
+      wordFieldsOrder = cat.wordFieldsOrder || [];
+      wordFields = [];
+
+      if (wordFieldsOrder.length > 0 && words.length > 0) {
+        wordFields = wordFieldsOrder.map(k => ({
+          key: k,
+          label: k,
+          type: "text",
+          required: false
+        }));
+      } else if (words.length > 0) {
+        const excluded = ["id","failCount","correctCount"];
+        const sample = words[0];
+        const keys = Object.keys(sample).filter(k => !excluded.includes(k));
+        wordFieldsOrder = keys;
+        wordFields = keys.map(k => ({
+          key: k,
+          label: k,
+          type: "text",
+          required: false
+        }));
+      }
+
+      generarFormularioDinamico(wordFields);
+      updateFieldsList();
+      updateFrontFieldOptions();
+      currentPage = 1; 
+      renderizarTabla();
+      renderNewWordsTable();
+
+      if (unsubGlobalHistory) unsubGlobalHistory();
+      unsubGlobalHistory = subscribeGlobalHistoryForCategory(currentCategoryId);
+
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      practiceSessionWords = [];
+    }
+
+    function subscribeGlobalHistoryForCategory(catId) {
+      const user = auth.currentUser;
+      if (!user || !catId) return null;
+      const colRef = collection(db, "users", user.uid, "categories", catId, "globalHistory");
+      return onSnapshotQuery(colRef, (snapshot) => {
+        globalHistory = [];
+        snapshot.forEach(docSnap => {
+          globalHistory.push(docSnap.data());
+        });
+        renderGlobalStats();
+      }, (err) => {
+        console.error("Error en globalHistory:", err);
+      });
+    }
+
+    async function resetCategoryStats(catId) {
+      const cat = categories.find(c => c.id === catId);
+      if (!cat) return;
+      cat.words.forEach(w => {
+        w.failCount = 0;
+        w.correctCount = 0;
+      });
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        const docRef = doc(db, "users", user.uid, "categories", catId);
+        await setDoc(docRef, { words: cat.words }, { merge: true });
+        const colRef = collection(db, "users", user.uid, "categories", catId, "globalHistory");
+        const snap = await getDocs(colRef);
+        for (const d of snap.docs) {
+          await deleteDoc(d.ref);
+        }
+        alert(`Estadísticas reiniciadas para "${catId}".`);
+      } catch (e) {
+        console.error("Error reiniciando stats:", e);
+        alert("Error reiniciando stats. Revisa la consola.");
+      }
+    }
+
+    async function deleteCategory(catId) {
+      const user = auth.currentUser;
+      if (!user) return;
+      const colRef = collection(db, "users", user.uid, "categories", catId, "globalHistory");
+      const snap = await getDocs(colRef);
+      for (const d of snap.docs) {
+        await deleteDoc(d.ref);
+      }
+      const docRef = doc(db, "users", user.uid, "categories", catId);
+      await deleteDoc(docRef);
+
+      if (currentCategoryId === catId) {
+        currentCategoryId = "";
+        localStorage.removeItem("currentCategoryId");
+        words = [];
+        wordFields = [];
+        wordFieldsOrder = [];
+        globalHistory = [];
+      }
+      alert("Carátula eliminada.");
+    }
+
+    function renderAllDropdowns() {
+      const ddPracticar = document.getElementById("caratulaDropdownPracticar");
+      const ddGestionar = document.getElementById("caratulaDropdownGestionar");
+      const ddEstadisticas = document.getElementById("caratulaDropdownEstadisticas");
+      const ddNuevas = document.getElementById("caratulaDropdownNuevas");
+      const selects = [ddPracticar, ddGestionar, ddEstadisticas, ddNuevas].filter(Boolean);
+
+      selects.forEach(sel => {
+        sel.innerHTML = "";
+        categories.forEach(cat => {
+          const opt = document.createElement("option");
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          if (cat.id === currentCategoryId) {
+            opt.selected = true;
+          }
+          sel.appendChild(opt);
+        });
+        sel.addEventListener("change", e => {
+          selectCategoryById(e.target.value);
+        });
+        if (sel.options.length === 1) {
+          sel.selectedIndex = 0;
+          selectCategoryById(sel.value);
+        }
+      });
+
+      updateDropdownChecks();
+    }
+
+    function updateDropdownChecks() {
+      const allSelectIds = [
+        "caratulaDropdownPracticar",
+        "caratulaDropdownGestionar",
+        "caratulaDropdownEstadisticas",
+        "caratulaDropdownNuevas"
+      ];
+      allSelectIds.forEach(selectId => {
+        const sel = document.getElementById(selectId);
+        const checkEl = document.getElementById(selectId + "Check");
+        if (!sel || !checkEl) return;
+        if (sel.value === currentCategoryId && currentCategoryId !== "") {
+          checkEl.style.display = "inline";
+        } else {
+          checkEl.style.display = "none";
+        }
+      });
+    }
+
+    document.getElementById("confirmCaratulaPracticar").addEventListener("click", () => {
+      const selectedCatId = document.getElementById("caratulaDropdownPracticar").value;
+      if (selectedCatId) {
+        selectCategoryById(selectedCatId);
+      } else {
+        alert("Por favor, selecciona una carátula.");
+      }
+    });
+
+    document.getElementById("confirmCaratulaGestionar").addEventListener("click", () => {
+      const selectedCatId = document.getElementById("caratulaDropdownGestionar").value;
+      if (selectedCatId) {
+        selectCategoryById(selectedCatId);
+      } else {
+        alert("Por favor, selecciona una carátula.");
+      }
+    });
+
+    document.getElementById("confirmCaratulaEstadisticas").addEventListener("click", () => {
+      const selectedCatId = document.getElementById("caratulaDropdownEstadisticas").value;
+      if (selectedCatId) {
+        selectCategoryById(selectedCatId);
+      } else {
+        alert("Por favor, selecciona una carátula.");
+      }
+    });
+
+    document.getElementById("confirmCaratulaNuevas").addEventListener("click", () => {
+      const selectedCatId = document.getElementById("caratulaDropdownNuevas").value;
+      if (selectedCatId) {
+        selectCategoryById(selectedCatId);
+      } else {
+        alert("Por favor, selecciona una carátula.");
+      }
+    });
+
+    function updateFrontFieldOptions() {
+      const frontSelect = document.getElementById("frontField");
+      if (!frontSelect) return;
+      frontSelect.innerHTML = "";
+
+      if (wordFields.length > 0) {
+        wordFields.forEach(field => {
+          const opt = document.createElement("option");
+          opt.value = field.key;
+          opt.textContent = field.label;
+          frontSelect.appendChild(opt);
+        });
+      } else if (words.length > 0) {
+        Object.keys(words[0]).forEach(key => {
+          if (!["id","failCount","correctCount"].includes(key)) {
+            const opt = document.createElement("option");
+            opt.value = key;
+            opt.textContent = key;
+            frontSelect.appendChild(opt);
+          }
+        });
+      } else {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No hay campos";
+        frontSelect.appendChild(opt);
+      }
+    }
+
+    function generarFormularioDinamico(fields) {
+      const form = document.getElementById("wordForm");
+      form.innerHTML = "";
+      if (fields.length === 0) {
+        form.innerHTML = "<p>No hay campos definidos. Importa un archivo o define tus campos manualmente.</p>";
+        return;
+      }
+      fields.forEach(field => {
+        const div = document.createElement("div");
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.setAttribute("for", field.key);
+        div.appendChild(label);
+        let input;
+        if (field.type === "textarea") {
+          input = document.createElement("textarea");
+        } else {
+          input = document.createElement("input");
+          input.type = field.type;
+        }
+        input.id = field.key;
+        input.name = field.key;
+        input.placeholder = field.label;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        form.appendChild(div);
+      });
+      const submitBtn = document.createElement("button");
+      submitBtn.textContent = "Agregar Palabra";
+      submitBtn.type = "submit";
+      form.appendChild(submitBtn);
+    }
+
+    /********************************
+     * RENDERIZAR TABLA GESTIONAR + FILTRO
+     ********************************/
+    function renderizarTabla() {
+      const tbody = document.querySelector("#wordsTable tbody");
+      const thead = document.querySelector("#wordsTable thead");
+      tbody.innerHTML = "";
+      thead.innerHTML = "";
+
+      if (wordFieldsOrder.length > 0) {
+        const headerRow = document.createElement("tr");
+        wordFieldsOrder.forEach(key => {
+          const field = wordFields.find(f => f.key === key);
+          if (field) {
+            const th = document.createElement("th");
+            th.textContent = field.label;
+            headerRow.appendChild(th);
+          }
+        });
+        const thAcciones = document.createElement("th");
+        thAcciones.textContent = "Acciones";
+        headerRow.appendChild(thAcciones);
+        thead.appendChild(headerRow);
+      }
+
+      const totalWords = words.length;
+      const totalPages = Math.ceil(totalWords / pageSize);
+      if (currentPage > totalPages) currentPage = totalPages < 1 ? 1 : totalPages;
+      if (currentPage < 1) currentPage = 1;
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+      const wordsToRender = words.slice(start, end);
+
+      wordsToRender.forEach((word, idx) => {
+        const row = document.createElement("tr");
+        wordFieldsOrder.forEach(key => {
+          const td = document.createElement("td");
+          td.textContent = word[key] || "";
+          row.appendChild(td);
+        });
+        if (wordFieldsOrder.length > 0) {
+          const tdAcciones = document.createElement("td");
+          const btnEdit = document.createElement("button");
+          btnEdit.textContent = "Editar";
+          btnEdit.onclick = () => editarPalabra(start + idx);
+          const btnDelete = document.createElement("button");
+          btnDelete.textContent = "Borrar";
+          btnDelete.onclick = () => borrarPalabra(start + idx);
+          tdAcciones.appendChild(btnEdit);
+          tdAcciones.appendChild(btnDelete);
+          row.appendChild(tdAcciones);
+        }
+        tbody.appendChild(row);
+      });
+
+      const paginationInfo = document.getElementById("paginationInfo");
+      paginationInfo.textContent = `Página ${currentPage} de ${totalPages || 1}`;
+    }
+
+    document.getElementById("btnPrevPage").addEventListener("click", () => {
+      currentPage--;
+      renderizarTabla();
+    });
+    document.getElementById("btnNextPage").addEventListener("click", () => {
+      currentPage++;
+      renderizarTabla();
+    });
+
+    document.getElementById("wordSearch").addEventListener("input", () => {
+      const term = document.getElementById("wordSearch").value.toLowerCase();
+      if (term === "") {
+        currentPage = 1;
+        renderizarTabla();
+        return;
+      }
+      const filtered = words.map((word, index) => ({ word, index }))
+        .filter(item => {
+          return wordFieldsOrder.some(key =>
+            String(item.word[key] || "").toLowerCase().includes(term)
+          );
+        });
+
+      const tbody = document.querySelector("#wordsTable tbody");
+      const thead = document.querySelector("#wordsTable thead");
+      tbody.innerHTML = "";
+      thead.innerHTML = "";
+
+      if (wordFieldsOrder.length > 0) {
+        const headerRow = document.createElement("tr");
+        wordFieldsOrder.forEach(key => {
+          const field = wordFields.find(f => f.key === key);
+          if (field) {
+            const th = document.createElement("th");
+            th.textContent = field.label;
+            headerRow.appendChild(th);
+          }
+        });
+        const thAcciones = document.createElement("th");
+        thAcciones.textContent = "Acciones";
+        headerRow.appendChild(thAcciones);
+        thead.appendChild(headerRow);
+      }
+
+      filtered.forEach(item => {
+        const row = document.createElement("tr");
+        wordFieldsOrder.forEach(key => {
+          const td = document.createElement("td");
+          td.textContent = item.word[key] || "";
+          row.appendChild(td);
+        });
+        if (wordFieldsOrder.length > 0) {
+          const tdAcciones = document.createElement("td");
+          const btnEdit = document.createElement("button");
+          btnEdit.textContent = "Editar";
+          btnEdit.onclick = () => editarPalabra(item.index);
+          const btnDelete = document.createElement("button");
+          btnDelete.textContent = "Borrar";
+          btnDelete.onclick = () => borrarPalabra(item.index);
+          tdAcciones.appendChild(btnEdit);
+          tdAcciones.appendChild(btnDelete);
+          row.appendChild(tdAcciones);
+        }
+        tbody.appendChild(row);
+      });
+
+      const paginationInfo = document.getElementById("paginationInfo");
+      paginationInfo.textContent = `Mostrando ${filtered.length} resultado(s)`;
+    });
+
+    document.getElementById("wordForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      if (!currentCategoryId) {
+        alert("Primero selecciona una carátula.");
+        return;
+      }
+      let nuevaPalabra = {};
+      wordFields.forEach(field => {
+        const input = document.getElementById(field.key);
+        nuevaPalabra[field.key] = input.value;
+        input.value = "";
+      });
+      nuevaPalabra.failCount = 0;
+      nuevaPalabra.correctCount = 0;
+      if (!nuevaPalabra.id) {
+        nuevaPalabra.id = Date.now() + Math.random().toString(16).slice(2);
+      }
+      words.push(nuevaPalabra);
+      saveWords();
+      currentPage = Math.ceil(words.length / pageSize);
+      renderizarTabla();
+    });
+
+    window.editarPalabra = function(index) {
+      currentEditIndex = index;
+      const word = words[index];
+      const editDiv = document.getElementById("editFields");
+      editDiv.innerHTML = "";
+      wordFields.forEach(field => {
+        const div = document.createElement("div");
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.setAttribute("for", "edit_" + field.key);
+        div.appendChild(label);
+        let input;
+        if (field.type === "textarea") {
+          input = document.createElement("textarea");
+        } else {
+          input = document.createElement("input");
+          input.type = field.type;
+        }
+        input.id = "edit_" + field.key;
+        input.name = field.key;
+        input.value = word[field.key] || "";
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        editDiv.appendChild(div);
+      });
+      document.getElementById("editModal").style.display = "block";
+    };
+
+    window.borrarPalabra = function(index) {
+      if (confirm("¿Borrar esta palabra?")) {
+        words.splice(index, 1);
+        saveWords();
+        renderizarTabla();
+      }
+    };
+
+    document.getElementById("editWordForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (currentEditIndex === null) return;
+      wordFields.forEach(field => {
+        const input = document.getElementById("edit_" + field.key);
+        words[currentEditIndex][field.key] = input.value;
+      });
+      if (!words[currentEditIndex].id) {
+        words[currentEditIndex].id = Date.now() + Math.random().toString(16).slice(2);
+      }
+      saveWords();
+      renderizarTabla();
+      document.getElementById("editModal").style.display = "none";
+      currentEditIndex = null;
+    });
+
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("editModal").style.display = "none";
+      currentEditIndex = null;
+    });
+
+    /********************************
+     * SAVE WORDS EN FIRESTORE
+     ********************************/
+    function saveWords() {
+      if (!currentCategoryId) return;
+      const cat = categories.find(c => c.id === currentCategoryId);
+      if (!cat) return;
+      cat.words = words; 
+      cat.wordFieldsOrder = wordFieldsOrder; 
+      saveCategoryToFirestore(cat.id, cat.words, cat.wordFieldsOrder);
+    }
+
+    async function saveCategoryToFirestore(catId, wordsArray, fieldsOrder) {
+      const user = auth.currentUser;
+      if (!user || !catId) return;
+      try {
+        const docRef = doc(db, "users", user.uid, "categories", catId);
+        const sanitizedWords = wordsArray.map(w => {
+          const newWord = {};
+          for (let k in w) {
+            newWord[k] = w[k] == undefined ? null : w[k];
+          }
+          return newWord;
+        });
+        await setDoc(docRef, {
+          words: sanitizedWords,
+          wordFieldsOrder: fieldsOrder
+        }, { merge: true });
+      } catch (err) {
+        console.error("Error guardando carátula:", err);
+      }
+    }
+
+    /********************************
+     * GESTIÓN DE CAMPOS (DRAG & DROP)
+     ********************************/
+    function updateFieldsList() {
+      const fieldsList = document.getElementById("fieldsList");
+      fieldsList.innerHTML = "";
+      wordFields.forEach((field, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${field.label} (${field.key}) - ${field.type} - ${field.required ? "Requerido" : "Opcional"}`;
+        li.setAttribute("draggable", "true");
+        li.setAttribute("data-index", index);
+        li.addEventListener("dragstart", handleDragStart);
+        li.addEventListener("dragover", handleDragOver);
+        li.addEventListener("drop", handleDrop);
+        const btnRemove = document.createElement("button");
+        btnRemove.textContent = "Eliminar";
+        btnRemove.onclick = () => {
+          wordFields.splice(index, 1);
+          wordFieldsOrder = wordFieldsOrder.filter(key => key !== field.key);
+          updateFieldsList();
+          generarFormularioDinamico(wordFields);
+          updateFrontFieldOptions();
+          renderizarTabla();
+          saveWords();
+        };
+        li.appendChild(btnRemove);
+        fieldsList.appendChild(li);
+      });
+    }
+    function handleDragStart(e) {
+      draggedIndex = parseInt(e.target.getAttribute("data-index"));
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", draggedIndex);
+    }
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+    function handleDrop(e) {
+      e.preventDefault();
+      const targetIndex = parseInt(e.target.getAttribute("data-index"));
+      if (draggedIndex === null || targetIndex === draggedIndex) return;
+      const [movedField] = wordFieldsOrder.splice(draggedIndex, 1);
+      wordFieldsOrder.splice(targetIndex, 0, movedField);
+      wordFields = wordFieldsOrder.map(k => wordFields.find(f => f.key === k));
+      updateFieldsList();
+      renderizarTabla();
+      saveWords();
+      draggedIndex = null;
+    }
+
+    document.getElementById("saveFieldsOrder").addEventListener("click", () => {
+      saveWords();
+      alert("Orden de campos guardado.");
+    });
+
+    document.getElementById("fieldsForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      if (!currentCategoryId) {
+        alert("Primero selecciona una carátula.");
+        return;
+      }
+      const key = document.getElementById("fieldKey").value.trim();
+      const label = document.getElementById("fieldLabel").value.trim();
+      const type = document.getElementById("fieldType").value;
+      const required = document.getElementById("fieldRequired").checked;
+
+      if (key === "" || label === "") {
+        alert("Por favor, ingresa todos los datos.");
+        return;
+      }
+      if (key.indexOf(" ") >= 0) {
+        alert("La clave no debe contener espacios.");
+        return;
+      }
+      if (wordFields.some(f => f.key === key)) {
+        alert("Ya existe un campo con esa clave.");
+        return;
+      }
+
+      const newField = { key, label, type, required };
+      wordFields.push(newField);
+      wordFieldsOrder.push(key);
+      updateFieldsList();
+      generarFormularioDinamico(wordFields);
+      updateFrontFieldOptions();
+      renderizarTabla();
+      saveWords();
+      document.getElementById("fieldsForm").reset();
+    });
+
+    /********************************
+     * IMPORTAR / EXPORTAR
+     ********************************/
+    window.exportData = function() {
+      const dataStr = JSON.stringify(words, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "palabras.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    document.getElementById("exportData").addEventListener("click", window.exportData);
+
+    document.getElementById("importData").addEventListener("change", (e) => {
+      fileToImport = e.target.files[0] || null;
+    });
+
+    document.getElementById("confirmUpload").addEventListener("click", async () => {
+      if (!fileToImport) {
+        alert("No se ha seleccionado ningún archivo para importar.");
+        return;
+      }
+      const uploadProgressContainer = document.getElementById("uploadProgressContainer");
+      const uploadProgressBar = document.getElementById("uploadProgressBar");
+      uploadProgressContainer.style.display = "block";
+      uploadProgressBar.style.width = "0%";
+
+      const fileName = fileToImport.name.toLowerCase();
+      const reader = new FileReader();
+      reader.onprogress = function(evt) {
+        if (evt.lengthComputable) {
+          const percentLoaded = Math.round((evt.loaded / evt.total) * 100);
+          uploadProgressBar.style.width = percentLoaded + "%";
+        }
+      };
+      reader.onload = function(evt) {
+        uploadProgressBar.style.width = "100%";
+        setTimeout(() => {
+          uploadProgressContainer.style.display = "none";
+        }, 500);
+
+        const data = evt.target.result;
+        if (fileName.endsWith(".json")) {
+          try {
+            const jsonContent = JSON.parse(data);
+            importarDatosLeidos(jsonContent);
+          } catch (err) {
+            alert("Error parsing JSON: " + err);
+          }
+        } else if (fileName.endsWith(".csv")) {
+          Papa.parse(data, {
+            header: true,
+            complete: function(results) {
+              importarDatosLeidos(results.data);
+            }
+          });
+        } else if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const sheetData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+          importarDatosLeidos(sheetData);
+        } else {
+          alert("Formato de archivo no soportado. Usa .json, .csv, .xls o .xlsx");
+        }
+      };
+
+      if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+        reader.readAsArrayBuffer(fileToImport);
+      } else {
+        reader.readAsText(fileToImport);
+      }
+    });
+
+    document.getElementById("appendData").addEventListener("click", () => {
+      document.getElementById("appendFile").click();
+    });
+    document.getElementById("appendFile").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fileName = file.name.toLowerCase();
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = evt.target.result;
+        if (fileName.endsWith(".json")) {
+          try {
+            const jsonContent = JSON.parse(data);
+            fusionarDatos(jsonContent);
+          } catch (err) {
+            alert("Error parsing JSON: " + err);
+          }
+        } else if (fileName.endsWith(".csv")) {
+          Papa.parse(data, {
+            header: true,
+            complete: function(results) {
+              fusionarDatos(results.data);
+            }
+          });
+        } else if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const sheetData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+          fusionarDatos(sheetData);
+        } else {
+          alert("Formato de archivo no soportado.");
+        }
+      };
+      if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+
+    function importarDatosLeidos(importArray) {
+      if (!Array.isArray(importArray)) {
+        alert("El archivo no contiene un array de datos válido.");
+        return;
+      }
+      words = importArray.map(obj => ({
+        ...obj,
+        id: obj.id || (Date.now() + Math.random().toString(16).slice(2)),
+        failCount: obj.failCount || 0,
+        correctCount: obj.correctCount || 0
+      }));
+      if (words.length > 0 && wordFieldsOrder.length === 0) {
+        const excluded = ["id","failCount","correctCount"];
+        const sample = words[0];
+        const keys = Object.keys(sample).filter(k => !excluded.includes(k));
+        wordFieldsOrder = keys;
+        wordFields = keys.map(k => ({
+          key: k,
+          label: k,
+          type: "text",
+          required: false
+        }));
+      }
+      saveWords();
+      renderizarTabla();
+      generarFormularioDinamico(wordFields);
+      updateFieldsList();
+      updateFrontFieldOptions();
+      alert("Datos importados correctamente.");
+    }
+
+    function fusionarDatos(importArray) {
+      if (!Array.isArray(importArray)) {
+        alert("El archivo no contiene un array de datos válido.");
+        return;
+      }
+      importArray.forEach(obj => {
+        const existingIndex = words.findIndex(w => w.id === obj.id);
+        if (existingIndex >= 0) {
+          words[existingIndex] = {
+            ...words[existingIndex],
+            ...obj,
+            failCount: obj.failCount || 0,
+            correctCount: obj.correctCount || 0
+          };
+        } else {
+          words.push({
+            ...obj,
+            id: obj.id || (Date.now() + Math.random().toString(16).slice(2)),
+            failCount: obj.failCount || 0,
+            correctCount: obj.correctCount || 0
+          });
+        }
+      });
+      if (words.length > 0 && wordFieldsOrder.length === 0) {
+        const excluded = ["id","failCount","correctCount"];
+        const sample = words[0];
+        const keys = Object.keys(sample).filter(k => !excluded.includes(k));
+        wordFieldsOrder = keys;
+        wordFields = keys.map(k => ({
+          key: k,
+          label: k,
+          type: "text",
+          required: false
+        }));
+      }
+      saveWords();
+      renderizarTabla();
+      generarFormularioDinamico(wordFields);
+      updateFieldsList();
+      updateFrontFieldOptions();
+      alert("Datos fusionados correctamente.");
+    }
+
+    /********************************
+     * MODO PRACTICAR
+     ********************************/
+    const btnStartPractice = document.getElementById("startPractice");
+    const flashcardDiv = document.getElementById("flashcard");
+    const detailsDiv = document.getElementById("details");
+    const btnMostrar = document.getElementById("btnMostrar");
+    const btnBien = document.getElementById("btnBien");
+    const btnMal = document.getElementById("btnMal");
+    const btnFinishSession = document.getElementById("finishSession");
+    const btnResetSession = document.getElementById("resetSession");
+    const progressBar = document.getElementById("progressBar");
+    const progressCount = document.getElementById("progressCount");
+
+    btnStartPractice.addEventListener("click", async () => {
+      if (!currentCategoryId) {
+        alert("Primero selecciona una carátula.");
+        return;
+      }
+      await startPracticeSession();
+    });
+
+    async function startPracticeSession() {
+      const mode = document.getElementById("practiceMode").value;
+      if (mode === "dificultad") {
+        await syncStatsWithGlobalHistory();
+      }
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      updateProgress();
+
+      if (mode === "normal") {
+        weightedMode = false;
+        practiceSessionWords = [...words];
+      } else if (mode === "aleatorio") {
+        weightedMode = false;
+        practiceSessionWords = shuffleArray([...words]);
+      } else if (mode === "dificultad") {
+        weightedMode = true;
+        let filtered = words.filter(card => {
+          let grade = obtenerCalificacion(card);
+          return grade === "C" || grade === "D" || grade === "F";
+        });
+        if (filtered.length === 0) {
+          alert("No hay tarjetas para repasar.");
+          return;
+        }
+        practiceSessionWords = weightedShuffle(filtered);
+      }
+      showCard();
+    }
+
+    function updateProgress() {
+      if (practiceSessionWords.length > 0) {
+        let pct = (currentIndex / practiceSessionWords.length) * 100;
+        progressBar.style.width = `${pct}%`;
+        progressCount.textContent = `Progreso: ${currentIndex} / ${practiceSessionWords.length}`;
+      } else {
+        progressBar.style.width = "0%";
+        progressCount.textContent = "";
+      }
+    }
+
+    function showCard() {
+      updateProgress();
+      if (currentIndex >= practiceSessionWords.length) {
+        return;
+      }
+      btnBien.style.border = "";
+      btnMal.style.border = "";
+
+      const card = practiceSessionWords[currentIndex];
+      const frontField = document.getElementById("frontField").value;
+      flashcardDiv.style.borderLeft = "10px solid " + obtenerColor(card);
+      flashcardDiv.style.borderRight = "10px solid " + obtenerColor(card);
+      flashcardDiv.style.borderTop = "4px solid transparent";
+      flashcardDiv.style.borderBottom = "4px solid transparent";
+      flashcardDiv.textContent = card[frontField] || "?";
+
+      if (responses[currentIndex]) {
+        detailsDiv.innerHTML = renderCardDetails(card, frontField);
+        detailsDiv.classList.remove("hidden");
+        btnMostrar.classList.add("hidden");
+        btnBien.classList.add("hidden");
+        btnMal.classList.add("hidden");
+      } else {
+        detailsDiv.classList.add("hidden");
+        btnMostrar.classList.remove("hidden");
+        btnBien.classList.add("hidden");
+        btnMal.classList.add("hidden");
+      }
+    }
+
+    btnMostrar.addEventListener("click", () => {
+      if (currentIndex < practiceSessionWords.length) {
+        const card = practiceSessionWords[currentIndex];
+        const frontField = document.getElementById("frontField").value;
+        detailsDiv.innerHTML = renderCardDetails(card, frontField);
+        detailsDiv.classList.remove("hidden");
+        btnMostrar.classList.add("hidden");
+        btnBien.classList.remove("hidden");
+        btnMal.classList.remove("hidden");
+      }
+    });
+
+    async function responder(correcto) {
+      if (currentIndex >= practiceSessionWords.length) return;
+      if (responses[currentIndex]) return;
+      const card = practiceSessionWords[currentIndex];
+      const frontField = document.getElementById("frontField").value;
+      detailsDiv.innerHTML = renderCardDetails(card, frontField);
+      detailsDiv.classList.remove("hidden");
+      sessionPracticed++;
+
+      let respText = "";
+      if (correcto) {
+        correctCount++;
+        respText = "Correcto";
+        responses[currentIndex] = "Correcto";
+        flashcardDiv.style.borderTop = "4px solid green";
+        flashcardDiv.style.borderBottom = "4px solid green";
+        btnBien.style.border = "2px solid green";
+        currentStreak++;
+        card.correctCount = (card.correctCount || 0) + 1;
+      } else {
+        respText = "Incorrecto";
+        card.failCount = (card.failCount || 0) + 1;
+        responses[currentIndex] = "Incorrecto";
+        flashcardDiv.style.borderTop = "4px solid red";
+        flashcardDiv.style.borderBottom = "4px solid red";
+        btnMal.style.border = "2px solid red";
+        currentStreak = 0;
+      }
+      if (!card.id) {
+        card.id = Date.now() + Math.random().toString(16).slice(2);
+      }
+
+      addGlobalHistoryEntry(card, card[frontField], respText)
+        .then(() => console.log("Historial guardado"))
+        .catch(err => console.error("Error en addGlobalHistoryEntry:", err));
+
+      saveWords();
+      setTimeout(() => {
+        flashcardDiv.style.borderTop = "4px solid transparent";
+        flashcardDiv.style.borderBottom = "4px solid transparent";
+        currentIndex++;
+        showCard();
+      }, settings.feedbackDelay);
+    }
+
+    btnBien.addEventListener("click", () => responder(true));
+    btnMal.addEventListener("click", () => responder(false));
+
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("sectionPracticar").classList.contains("active")) {
+        if (!responses[currentIndex] && !btnMostrar.classList.contains("hidden")) {
+          if (e.key === settings.keyMostrar) {
+            btnMostrar.click();
+            return;
+          }
+        }
+        if (!responses[currentIndex] && !btnBien.classList.contains("hidden")) {
+          if (e.key === settings.keyCorrect) responder(true);
+          if (e.key === settings.keyIncorrect) responder(false);
+        }
+      }
+    });
+
+    btnFinishSession.addEventListener("click", () => {
+      let sessionData = {
+        date: new Date().toISOString(),
+        total: sessionPracticed,
+        correct: correctCount,
+        incorrect: sessionPracticed - correctCount,
+        percentage: sessionPracticed ? ((correctCount / sessionPracticed) * 100).toFixed(2) : "0"
+      };
+      let history = JSON.parse(localStorage.getItem("sessionHistory")) || [];
+      history.push(sessionData);
+      localStorage.setItem("sessionHistory", JSON.stringify(history));
+      practiceSessionWords = [];
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      alert("Sesión finalizada.");
+      showSection("sectionPracticar");
+    });
+
+    btnResetSession.addEventListener("click", () => {
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      flashcardDiv.classList.remove("hidden");
+      updateProgress();
+      showCard();
+    });
+
+    flashcardDiv.addEventListener("click", () => {
+      if (currentIndex < practiceSessionWords.length && settings.audioEnabled) {
+        const card = practiceSessionWords[currentIndex];
+        speak(card.pinyin);
+      }
+    });
+
+    async function addGlobalHistoryEntry(card, frontValue, respText) {
+      const user = auth.currentUser;
+      if (!user || !currentCategoryId) return;
+      try {
+        await addDoc(collection(db, "users", user.uid, "categories", currentCategoryId, "globalHistory"), {
+          date: new Date().toISOString(),
+          id: card.id,
+          campoFrontal: frontValue,
+          pinyin: card.pinyin || "",
+          respuesta: respText
+        });
+      } catch (e) {
+        console.error("Error en globalHistory:", e);
+      }
+    }
+
+    async function syncStatsWithGlobalHistory() {
+      // No se implementa nada especial por ahora
+    }
+
+    /********************************
+     * ESTADÍSTICAS
+     ********************************/
+    function obtenerColor(obj) {
+      const fallos = obj.failCount || 0;
+      const aciertos = obj.correctCount || 0;
+      const total = fallos + aciertos;
+      if (total === 0) return "#FFFFFF";
+      const porcentajeAciertos = (aciertos / total) * 100;
+      if (porcentajeAciertos >= 90) return "#4CAF50";
+      else if (porcentajeAciertos >= 80) return "#8BC34A";
+      else if (porcentajeAciertos >= 70) return "#FFEB3B";
+      else if (porcentajeAciertos >= 60) return "#FF9800";
+      else return "#F44336";
+    }
+    function obtenerCalificacion(obj) {
+      const fallos = obj.failCount || 0;
+      const aciertos = obj.correctCount || 0;
+      const total = fallos + aciertos;
+      if (total === 0) return "-";
+      const porcentajeAciertos = (aciertos / total) * 100;
+      if (porcentajeAciertos >= 90) return "A";
+      else if (porcentajeAciertos >= 80) return "B";
+      else if (porcentajeAciertos >= 70) return "C";
+      else if (porcentajeAciertos >= 60) return "D";
+      else return "F";
+    }
+
+    function renderGlobalStats() {
+      if (!globalHistory || globalHistory.length === 0) {
+        document.getElementById("globalStats").textContent = "No hay estadísticas globales disponibles para esta carátula.";
+        document.querySelector("#failTable tbody").innerHTML = "";
+        return;
+      }
+      let statsMap = {};
+      globalHistory.forEach(entry => {
+        const id = entry.id;
+        if (!statsMap[id]) {
+          statsMap[id] = {
+            id,
+            campoFrontal: entry.campoFrontal,
+            failCount: 0,
+            correctCount: 0
+          };
+        }
+        if (entry.respuesta === "Incorrecto") {
+          statsMap[id].failCount++;
+        } else if (entry.respuesta === "Correcto") {
+          statsMap[id].correctCount++;
+        }
+      });
+      let statsArray = Object.values(statsMap);
+      statsArray.forEach(obj => {
+        obj.total = obj.failCount + obj.correctCount;
+        obj.accuracy = obj.total > 0 ? ((obj.correctCount / obj.total) * 100).toFixed(2) + "%" : "0%";
+        obj.calificacion = obj.total > 0 ? obtenerCalificacion(obj) : "-";
+      });
+      statsArray.sort((a, b) => {
+        let diff = 0;
+        if (a[currentSortField] < b[currentSortField]) diff = -1;
+        else if (a[currentSortField] > b[currentSortField]) diff = 1;
+        return currentSortOrder === 'asc' ? diff : -diff;
+      });
+      document.getElementById("globalStats").textContent = `Total de palabras: ${words.length}`;
+      const tbody = document.querySelector("#failTable tbody");
+      tbody.innerHTML = "";
+      statsArray.forEach(obj => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${obj.campoFrontal}</td>
+          <td>${obj.failCount}</td>
+          <td>${obj.correctCount}</td>
+          <td>${obj.total}</td>
+          <td style="background-color: ${obtenerColor(obj)}">${obj.accuracy}</td>
+          <td style="background-color: ${obtenerColor(obj)}">${obj.calificacion}</td>
+          <td><button onclick="resetStatsForWord('${obj.id}')">Resetear</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    window.resetStatsForWord = async function(wordId) {
+      if (!currentCategoryId) return;
+      if (!confirm("¿Deseas resetear las estadísticas para esta palabra?")) return;
+      let w = words.find(x => x.id === wordId);
+      if (w) {
+        w.failCount = 0;
+        w.correctCount = 0;
+      }
+      saveWords();
+      const user = auth.currentUser;
+      if (user) {
+        const colRef = collection(db, "users", user.uid, "categories", currentCategoryId, "globalHistory");
+        const snapshot = await getDocs(colRef);
+        for (const docSnap of snapshot.docs) {
+          if (docSnap.data().id === wordId) {
+            await deleteDoc(docSnap.ref);
+          }
+        }
+      }
+      alert("Estadísticas reiniciadas para la palabra.");
+      renderGlobalStats();
+    };
+
+    function initGlobalStatsSorting() {
+      const headers = document.querySelectorAll("#failTable thead th");
+      headers.forEach(th => {
+        th.addEventListener("click", () => {
+          const field = th.getAttribute("data-field");
+          if (!field) return;
+          if (currentSortField === field) {
+            currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+          } else {
+            currentSortField = field;
+            currentSortOrder = 'asc';
+          }
+          renderGlobalStats();
+        });
+      });
+    }
+    function renderSessionStats() {
+      let frontField = document.getElementById("frontField").value ||
+        (wordFieldsOrder.length > 0 ? wordFieldsOrder[0] : "N/A");
+      const sessionStats = document.getElementById("sessionStats");
+      sessionStats.textContent = `
+        Practicadas: ${sessionPracticed} | Aciertos: ${correctCount} |
+        Errores: ${sessionPracticed - correctCount} | Racha: ${currentStreak}
+      `;
+      const tbody = document.querySelector("#sessionDetailTable tbody");
+      tbody.innerHTML = "";
+      responses.forEach((resp, i) => {
+        const card = practiceSessionWords[i];
+        const valorFrontal = card ? (card[frontField] || "-") : "-";
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${i + 1}</td><td>${valorFrontal}</td><td>${resp}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+    document.getElementById("tabGlobal").addEventListener("click", () => {
+      document.getElementById("globalStatsContainer").classList.add("active");
+      document.getElementById("sessionStatsContainer").classList.remove("active");
+      renderGlobalStats();
+    });
+    document.getElementById("tabSession").addEventListener("click", () => {
+      document.getElementById("sessionStatsContainer").classList.add("active");
+      document.getElementById("globalStatsContainer").classList.remove("active");
+      renderSessionStats();
+    });
+
+    /********************************
+     * NUEVAS PALABRAS
+     ********************************/
+    function renderNewWordsTable() {
+      const count = parseInt(document.getElementById("newWordsCount").value) || 10;
+      newWords = words.slice(-count).reverse();
+      renderNewWordsFromArray();
+    }
+
+    function renderNewWordsFromArray() {
+      const newWordsTable = document.getElementById("newWordsTable");
+      const thead = newWordsTable.querySelector("thead");
+      const tbody = newWordsTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (wordFields && wordFields.length > 0) {
+        const headerRow = document.createElement("tr");
+        wordFields.forEach(field => {
+          const th = document.createElement("th");
+          th.textContent = field.label;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+      } else {
+        const headerRow = document.createElement("tr");
+        ["Campo 1", "Campo 2", "Campo 3"].forEach(label => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+      }
+
+      newWords.forEach(w => {
+        const row = document.createElement("tr");
+        wordFields.forEach((field, colIndex) => {
+          const cell = document.createElement("td");
+          cell.textContent = w[field.key] || "";
+          if (colIndex === 0) {
+            cell.addEventListener("click", () => {
+              const rowCells = row.children;
+              for (let i = 0; i < rowCells.length; i++) {
+                rowCells[i].style.backgroundColor = "";
+                rowCells[i].style.color = "";
+              }
+            });
+          } else {
+            cell.addEventListener("click", () => {
+              const tableBody = document.querySelector("#newWordsTable tbody");
+              const rows = tableBody.querySelectorAll("tr");
+              const isDark = cell.style.backgroundColor === selectedColor;
+              rows.forEach(r => {
+                const cells = r.children;
+                if (cells.length > colIndex) {
+                  if (isDark) {
+                    cells[colIndex].style.backgroundColor = "";
+                    cells[colIndex].style.color = "";
+                  } else {
+                    cells[colIndex].style.backgroundColor = selectedColor;
+                    cells[colIndex].style.color = (selectedColor.toLowerCase() === "#000000") ? "#000000" : "#ffffff";
+                  }
+                }
+              });
+            });
+          }
+          row.appendChild(cell);
+        });
+        tbody.appendChild(row);
+      });
+    }
+
+    document.getElementById("highlightColor").addEventListener("input", (e) => {
+      selectedColor = e.target.value;
+    });
+
+    document.getElementById("btnClearHighlight").addEventListener("click", () => {
+      document.querySelectorAll("#newWordsTable td").forEach(cell => {
+        cell.style.backgroundColor = "";
+        cell.style.color = "";
+      });
+    });
+
+    document.getElementById("btnRandomizeNewWords").addEventListener("click", () => {
+      newWords = shuffleArray(newWords);
+      renderNewWordsFromArray();
+    });
+
+    /********************************
+     * PRÁCTICA PERSONALIZADA
+     ********************************/
+    const btnCustomPractice = document.getElementById("btnCustomPractice");
+    const customPracticeModal = document.getElementById("customPracticeModal");
+    const closeCustomPracticeModal = document.getElementById("closeCustomPracticeModal");
+    const customPracticeSearch = document.getElementById("customPracticeSearch");
+    const customPracticeResultsTable = document.getElementById("customPracticeResults");
+    const customPracticeTable = document.getElementById("customPracticeTable");
+    const startCustomPracticeBtn = document.getElementById("startCustomPractice");
+
+    function renderCustomPracticeResultsHeader() {
+      const thead = customPracticeResultsTable.querySelector("thead");
+      thead.innerHTML = "";
+      const headerRow = document.createElement("tr");
+      wordFieldsOrder.forEach(k => {
+        const f = wordFields.find(x => x.key === k);
+        if (f) {
+          const th = document.createElement("th");
+          th.textContent = f.label;
+          headerRow.appendChild(th);
+        }
+      });
+      const thAgregar = document.createElement("th");
+      thAgregar.textContent = "Acción";
+      headerRow.appendChild(thAgregar);
+      thead.appendChild(headerRow);
+    }
+    function renderCustomPracticeResultsBody(filtered) {
+      const tbody = customPracticeResultsTable.querySelector("tbody");
+      tbody.innerHTML = "";
+      filtered.forEach(item => {
+        const row = document.createElement("tr");
+        wordFieldsOrder.forEach(k => {
+          const td = document.createElement("td");
+          td.textContent = item[k] || "";
+          row.appendChild(td);
+        });
+        const tdAccion = document.createElement("td");
+        const btnAgregar = document.createElement("button");
+        btnAgregar.textContent = "Agregar";
+        btnAgregar.style.background = "#4CAF50";
+        btnAgregar.style.color = "#fff";
+        btnAgregar.onclick = () => addToCustomPractice(item);
+        tdAccion.appendChild(btnAgregar);
+        row.appendChild(tdAccion);
+        tbody.appendChild(row);
+      });
+    }
+    function addToCustomPractice(item) {
+      const yaExiste = customPracticeList.find(x => x.id === item.id);
+      if (yaExiste) {
+        alert("Esta palabra ya está en la lista personalizada.");
+        return;
+      }
+      customPracticeList.push(item);
+      renderCustomPracticeTable();
+    }
+    function renderCustomPracticeTable() {
+      const thead = customPracticeTable.querySelector("thead");
+      const tbody = customPracticeTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (wordFieldsOrder.length > 0) {
+        const headerRow = document.createElement("tr");
+        wordFieldsOrder.forEach(k => {
+          const f = wordFields.find(x => x.key === k);
+          if (f) {
+            const th = document.createElement("th");
+            th.textContent = f.label;
+            headerRow.appendChild(th);
+          }
+        });
+        const thEliminar = document.createElement("th");
+        thEliminar.textContent = "Quitar";
+        headerRow.appendChild(thEliminar);
+        thead.appendChild(headerRow);
+      }
+
+      customPracticeList.forEach((w, idx) => {
+        const row = document.createElement("tr");
+        wordFieldsOrder.forEach(k => {
+          const td = document.createElement("td");
+          td.textContent = w[k] || "";
+          row.appendChild(td);
+        });
+        const tdEliminar = document.createElement("td");
+        const btnQuitar = document.createElement("button");
+        btnQuitar.textContent = "Quitar";
+        btnQuitar.style.background = "#f44336";
+        btnQuitar.style.color = "#fff";
+        btnQuitar.onclick = () => {
+          customPracticeList.splice(idx, 1);
+          renderCustomPracticeTable();
+        };
+        tdEliminar.appendChild(btnQuitar);
+        row.appendChild(tdEliminar);
+        tbody.appendChild(row);
+      });
+    }
+
+    btnCustomPractice.addEventListener("click", () => {
+      if (!currentCategoryId) {
+        alert("Selecciona una carátula primero.");
+        return;
+      }
+      renderCustomPracticeResultsHeader();
+      renderCustomPracticeResultsBody(words);
+      customPracticeModal.style.display = "block";
+    });
+    closeCustomPracticeModal.addEventListener("click", () => {
+      customPracticeModal.style.display = "none";
+      customPracticeSearch.value = "";
+    });
+    customPracticeSearch.addEventListener("input", () => {
+      const term = customPracticeSearch.value.toLowerCase();
+      if (term.trim() === "") {
+        renderCustomPracticeResultsBody(words);
+      } else {
+        const filtered = words.filter(w =>
+          wordFieldsOrder.some(k => String(w[k] || "").toLowerCase().includes(term))
+        );
+        renderCustomPracticeResultsBody(filtered);
+      }
+    });
+    startCustomPracticeBtn.addEventListener("click", () => {
+      if (customPracticeList.length === 0) {
+        alert("No hay palabras seleccionadas para la práctica personalizada.");
+        return;
+      }
+      startCustomPracticeSession();
+    });
+    async function startCustomPracticeSession() {
+      currentIndex = 0;
+      correctCount = 0;
+      sessionPracticed = 0;
+      responses = [];
+      currentStreak = 0;
+      weightedMode = false;
+      practiceSessionWords = [...customPracticeList];
+      alert("¡Práctica personalizada iniciada! Ve a la sección 'Practicar' para usarla.");
+      showSection("sectionPracticar");
+      showCard();
+    }
+
+    /********************************
+     * AJUSTES
+     ********************************/
+    function applyTheme() {
+      if (document.getElementById("darkTheme").checked) {
+        document.body.classList.add("dark-theme");
+        settings.darkTheme = true;
+      } else {
+        document.body.classList.remove("dark-theme");
+        settings.darkTheme = false;
+      }
+      saveSettings();
+    }
+    function saveSettings() {
+      localStorage.setItem("settings", JSON.stringify(settings));
+    }
+    function loadSettings() {
+      const stored = localStorage.getItem("settings");
+      if (stored) {
+        settings = JSON.parse(stored);
+        document.getElementById("keyMostrar").value = settings.keyMostrar;
+        document.getElementById("keyCorrect").value = settings.keyCorrect;
+        document.getElementById("keyIncorrect").value = settings.keyIncorrect;
+        document.getElementById("problemThreshold").value = settings.problemThreshold;
+        document.getElementById("feedbackDelay").value = settings.feedbackDelay;
+        document.getElementById("audioEnabled").value = settings.audioEnabled ? "true" : "false";
+        document.getElementById("darkTheme").checked = settings.darkTheme;
+        document.getElementById("notificationsEnabled").checked = settings.notificationsEnabled;
+        document.getElementById("newWordsCount").value = settings.newWordsCount;
+        document.getElementById("newWordsCountDisplay").textContent = settings.newWordsCount;
+        applyTheme();
+      }
+    }
+    const settingsForm = document.getElementById("settingsForm");
+    settingsForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      settings.keyMostrar = document.getElementById("keyMostrar").value;
+      settings.keyCorrect = document.getElementById("keyCorrect").value;
+      settings.keyIncorrect = document.getElementById("keyIncorrect").value;
+      settings.problemThreshold = parseInt(document.getElementById("problemThreshold").value);
+      settings.feedbackDelay = parseInt(document.getElementById("feedbackDelay").value);
+      settings.audioEnabled = (document.getElementById("audioEnabled").value === "true");
+      settings.darkTheme = document.getElementById("darkTheme").checked;
+      settings.notificationsEnabled = document.getElementById("notificationsEnabled").checked;
+      settings.newWordsCount = parseInt(document.getElementById("newWordsCount").value);
+      document.getElementById("newWordsCountDisplay").textContent = settings.newWordsCount;
+      saveSettings();
+      applyTheme();
+      alert("Ajustes guardados.");
+    });
+
+    document.getElementById("resetStats").addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Debes iniciar sesión para resetear estadísticas.");
+        return;
+      }
+      if (!confirm("¿Seguro que deseas resetear las estadísticas de TODAS las carátulas?")) return;
+      try {
+        for (let cat of categories) {
+          cat.words.forEach(w => {
+            w.failCount = 0;
+            w.correctCount = 0;
+          });
+          const docRef = doc(db, "users", user.uid, "categories", cat.id);
+          await setDoc(docRef, { words: cat.words }, { merge: true });
+          const colRef = collection(db, "users", user.uid, "categories", cat.id, "globalHistory");
+          const snap = await getDocs(colRef);
+          for (const d of snap.docs) {
+            await deleteDoc(d.ref);
+          }
+        }
+        alert("Estadísticas de TODAS las carátulas reiniciadas.");
+      } catch (err) {
+        console.error("Error al resetear estadísticas globales:", err);
+        alert("Error al resetear estadísticas. Ver consola.");
+      }
+    });
+
+    document.getElementById("resetAll").addEventListener("click", async () => {
+      if (!confirm("Esto borrará TODOS tus datos y ajustes. ¿Estás seguro?")) return;
+      localStorage.clear();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const colRef = collection(db, "users", user.uid, "categories");
+          const snap = await getDocs(colRef);
+          for (const docSnap of snap.docs) {
+            const catId = docSnap.id;
+            const subColRef = collection(db, "users", user.uid, "categories", catId, "globalHistory");
+            const subSnap = await getDocs(subColRef);
+            for (const d of subSnap.docs) {
+              await deleteDoc(d.ref);
+            }
+            await deleteDoc(docSnap.ref);
+          }
+        } catch (err) {
+          console.error("Error borrando carátulas:", err);
+        }
+      }
+      alert("Todos los datos fueron borrados.");
+      location.reload();
+    });
+
+    /********************************
+     * AUDIO
+     ********************************/
+    function speak(text) {
+      if ('speechSynthesis' in window && settings.audioEnabled) {
+        const voices = window.speechSynthesis.getVoices();
+        const mandarinVoice = voices.find(voice => voice.lang === 'zh-CN');
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (mandarinVoice) {
+          utterance.voice = mandarinVoice;
+        }
+        utterance.lang = 'zh-CN';
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    /********************************
+     * UTILIDADES
+     ********************************/
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    function weightedShuffle(array) {
+      return array.map(card => {
+        const total = (card.failCount || 0) + (card.correctCount || 0);
+        const accuracy = total > 0 ? (card.correctCount / total) * 100 : 50;
+        let weight = 100 - accuracy;
+        if (weight <= 0) weight = 0.01;
+        return { card, sortKey: -Math.log(Math.random()) / weight };
+      })
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .map(obj => obj.card);
+    }
+    function renderCardDetails(card, frontField) {
+      let details = "";
+      wordFields.forEach(field => {
+        if (field.key !== frontField) {
+          details += `<p><strong>${field.label}:</strong> ${card[field.key] || ""}</p>`;
+        }
+      });
+      return details;
+    }
+
+    /********************************
+     * AL CARGAR
+     ********************************/
+    window.addEventListener("DOMContentLoaded", () => {
+      loadSettings();
+      initGlobalStatsSorting();
+      showSection("sectionCaratulas");
+      const storedCatId = localStorage.getItem("currentCategoryId");
+      if (storedCatId) {
+        currentCategoryId = storedCatId;
+      }
+      const tabPalabras = document.getElementById("tabPalabras");
+      const tabCampos = document.getElementById("tabCampos");
+      const tabPalabrasContent = document.getElementById("tabPalabrasContent");
+      const tabCamposContent = document.getElementById("tabCamposContent");
+      tabPalabras.addEventListener("click", () => {
+        tabPalabrasContent.classList.add("active");
+        tabCamposContent.classList.remove("active");
+      });
+      tabCampos.addEventListener("click", () => {
+        tabCamposContent.classList.add("active");
+        tabPalabrasContent.classList.remove("active");
+      });
+    });
+  </script>
+</body>
+</html>
