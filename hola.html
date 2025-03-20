@@ -30,18 +30,17 @@
     .side-nav {
       position: fixed;
       top: 0;
-      right: 0;
+      right: -320px;
       width: 240px;
       height: 100%;
       background: #fff;
-      transition: transform 0.3s ease;
-      transform: translateX(100%);
+      transition: right 0.3s ease;
       z-index: 9999;
       padding: 20px 10px;
       overflow-y: auto;
     }
     .side-nav.open {
-      transform: translateX(0);
+      right: 0;
       border-left: 1px solid #ccc;
       box-shadow: -2px 0 8px rgba(0,0,0,0.2);
     }
@@ -82,6 +81,7 @@
     main {
       flex: 1;
       padding: 10px;
+      transition: margin-right 0.3s ease;
     }
     section {
       display: none;
@@ -331,93 +331,18 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-
-    /* Media Queries para dispositivos móviles */
-    @media (max-width: 768px) {
-      .side-nav {
-        width: 60%;
-        transform: translateX(100%);
-      }
-      .side-nav.open {
-        transform: translateX(0);
-      }
-      .menu-toggle {
-        top: 5px;
-        right: 5px;
-        width: 30px;
-        height: 30px;
-        font-size: 20px;
-      }
-      main {
-        padding: 5px;
-      }
-      section {
-        padding: 10px;
-      }
-      .flashcard {
-        font-size: 36px;
-        padding: 15px;
-      }
-      table {
-        font-size: 14px;
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-      }
-      form input, form textarea, form select {
-        font-size: 14px;
-        padding: 6px;
-      }
-      form button {
-        border: none;
-        font-size: 14px;
-        padding: 6px 10px;
-      }
-      .tabs button {
-        font-size: 14px;
-        padding: 6px 10px;
-      }
-      .caratula-card {
-        width: 100%;
-        min-height: auto;
-      }
-      .session-buttons {
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 5px;
-      }
-      .session-buttons button {
-        width: 48%;
-      }
-      #wordSearch {
-        font-size: 16px;
-        padding: 8px;
-      }
-      .pagination-controls button {
-        font-size: 14px;
-        padding: 6px 10px;
-      }
-      .modal-content {
-        width: 95%;
-        margin: 10% auto;
-      }
-      button {
-        border: none;
-        min-width: 80px;
-        min-height: 40px;
-      }
-      .responseButtons {
-        flex-direction: column;
-        gap: 5px;
-      }
-      #progressBarContainer {
-        height: 15px;
-      }
-      #progressCount {
-        font-size: 12px;
-      }
-    }
+    /* Ajustes para pantallas pequeñas (iPhone, etc.) */
+@media only screen and (max-width: 600px) {
+  .caratula-cards {
+    justify-content: center;
+    padding: 0 10px;
+  }
+  .caratula-card {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+}
   </style>
 </head>
 <body>
@@ -558,13 +483,13 @@
           <br/>
           <button id="exportData">Exportar Datos (JSON)</button>
           <input type="file" id="importData" accept=".json, .csv, .xls, .xlsx" style="display:inline-block;"/>
-          <!-- median para confirmar subida + barra de progreso -->
+          <!-- Botón para confirmar subida + barra de progreso -->
           <button id="confirmUpload" style="display:inline-block;">Confirmar Subida</button>
           <div id="uploadProgressContainer" style="display:none; background:#ddd; width:100%; height:20px; border-radius:10px; margin-top:5px;">
             <div id="uploadProgressBar" style="background:#4caf50; height:100%; width:0%;"></div>
           </div>
 
-          <!-- median e input para sumar datos -->
+          <!-- Botón e input para sumar datos -->
           <button id="appendData">Sumar al archivo</button>
           <input type="file" id="appendFile" accept=".json, .csv, .xls, .xlsx" style="display:none;"/>
         </div>
@@ -779,12 +704,12 @@
      ********************************/
     const firebaseConfig = {
       apiKey: "AIzaSyBnl6pd_m4AsypD1IPJ11FhgZQf8XFDEqw",
-      authDomain: "appz-571f4.firebaseapp.com",
-      projectId: "appz-571f4",
-      storageBucket: "appz-571f4.firebasestorage.app",
-      messagingSenderId: "709288105818",
-      appId: "1:709288105818:web:8141a1a00683d551960563",
-      measurementId: "G-K62SLNN75N"
+  authDomain: "appz-571f4.firebaseapp.com",
+  projectId: "appz-571f4",
+  storageBucket: "appz-571f4.firebasestorage.app",
+  messagingSenderId: "709288105818",
+  appId: "1:709288105818:web:8141a1a00683d551960563",
+  measurementId: "G-K62SLNN75N"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -851,10 +776,12 @@
 
     menuToggleBtn.addEventListener("click", () => {
       sideNav.classList.toggle("open");
+      mainContent.style.marginRight = sideNav.classList.contains("open") ? "240px" : "0";
     });
 
     function showSection(sectionId) {
       sideNav.classList.remove("open");
+      mainContent.style.marginRight = "0";
       const sections = [
         "sectionCaratulas",
         "sectionPracticar",
